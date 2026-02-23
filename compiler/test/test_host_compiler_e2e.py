@@ -31,16 +31,21 @@ def _get_xllr_test_plugin_path() -> str:
         raise RuntimeError("METAFFI_HOME not set")
 
     if platform.system() == 'Windows':
-        lib_name = 'xllr.test.dll'
+        candidates = ['xllr.test.dll']
     elif platform.system() == 'Darwin':
-        lib_name = 'libxllr.test.dylib'
+        candidates = ['xllr.test.dylib', 'libxllr.test.dylib']
     else:
-        lib_name = 'libxllr.test.so'
+        candidates = ['xllr.test.so', 'libxllr.test.so']
 
-    plugin_path = os.path.join(metaffi_home, 'test', lib_name)
-    if not os.path.exists(plugin_path):
-        raise FileNotFoundError(f"xllr.test plugin not found at: {plugin_path}")
-    return plugin_path
+    base_dir = os.path.join(metaffi_home, 'test')
+    for lib_name in candidates:
+        plugin_path = os.path.join(base_dir, lib_name)
+        if os.path.exists(plugin_path):
+            return plugin_path
+
+    raise FileNotFoundError(
+        f"xllr.test plugin not found in: {base_dir} (checked: {', '.join(candidates)})"
+    )
 
 
 def setUpModule():

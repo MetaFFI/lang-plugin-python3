@@ -223,8 +223,9 @@ void load_runtime(char** err)
 			return;
 		}
 
-		// Use first detected version - create() handles runtime loading internally
-		g_runtime_manager = cpython3_runtime_manager::create(versions[0]);
+		// detect_installed_python3() returns ascending versions (3.8..3.13);
+		// pick the newest available runtime for compatibility with the MetaFFI Python API.
+		g_runtime_manager = cpython3_runtime_manager::create(versions.back());
 
 		add_metaffi_sys_path(g_runtime_manager);
 
