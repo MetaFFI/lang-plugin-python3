@@ -44,8 +44,8 @@ TEST_CASE("single file module")
 
 	auto var_args = env.module_file.load_entity(
 		"callable=var_args,varargs",
-		{metaffi_int64_array_type},
-		{metaffi_int64_array_type});
+		{metaffi_int64_packed_array_type},
+		{metaffi_int64_packed_array_type});
 	std::vector<int64_t> args = {1, 2};
 	auto [va] = var_args.call<std::vector<int64_t>>(args);
 	CHECK(va == args);

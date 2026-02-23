@@ -389,7 +389,7 @@ void py_api_xcall_params_ret(void* context, cdts params_ret[2], char** out_err)
 //--------------------------------------------------------------------
 void pyxcall_no_params_ret(
         entity_context* pctxt,
-        cdts return_values[1],
+        cdts params_ret[2],
         char** out_err)
 {
 	try
@@ -448,8 +448,8 @@ void pyxcall_no_params_ret(
 			return;
 		}
 
-		// Convert result to CDTS using SDK serializer
-		cdts_python3_serializer ret_ser(*g_runtime_manager, return_values[0]);
+		// Convention: params_ret[0]=params (unused), params_ret[1]=retvals
+		cdts_python3_serializer ret_ser(*g_runtime_manager, params_ret[1]);
 		size_t retval_count = pctxt->retvals_types.size();
 
 		if(retval_count == 1)
@@ -471,23 +471,23 @@ void pyxcall_no_params_ret(
 	}
 }
 //--------------------------------------------------------------------
-void py_api_xcall_no_params_ret(void* context, cdts parameters[1], char** out_err)
+void py_api_xcall_no_params_ret(void* context, cdts params_ret[2], char** out_err)
 {
 	entity_context* pctxt = static_cast<entity_context*>(context);
-	pyxcall_no_params_ret(pctxt, parameters, out_err);
+	pyxcall_no_params_ret(pctxt, params_ret, out_err);
 }
 //--------------------------------------------------------------------
 void pyxcall_params_no_ret(
         entity_context* pctxt,
-        cdts parameters[1],
+        cdts params_ret[2],
         char** out_err)
 {
 	try
 	{
 		gil_guard guard;
 
-		// Convert CDTS to Python tuple using SDK serializer
-		cdts_python3_serializer params_ser(*g_runtime_manager, parameters[0]);
+		// Convention: params_ret[0]=params, params_ret[1]=retvals (unused)
+		cdts_python3_serializer params_ser(*g_runtime_manager, params_ret[0]);
 		PyObject* params = params_ser.extract_as_tuple();
 
 		if(pctxt->is_callable())
@@ -554,10 +554,10 @@ void pyxcall_params_no_ret(
 	}
 }
 //--------------------------------------------------------------------
-void py_api_xcall_params_no_ret(void* context, cdts return_values[1], char** out_err)
+void py_api_xcall_params_no_ret(void* context, cdts params_ret[2], char** out_err)
 {
 	entity_context* pctxt = static_cast<entity_context*>(context);
-	pyxcall_params_no_ret(pctxt, return_values, out_err);
+	pyxcall_params_no_ret(pctxt, params_ret, out_err);
 }
 //--------------------------------------------------------------------
 void pyxcall_no_params_no_ret(
@@ -570,15 +570,32 @@ void pyxcall_no_params_no_ret(
 
 		if(pctxt->is_callable())
 		{
-			// Use SDK Entity for callables
-			auto* callable = dynamic_cast<CallableEntity*>(pctxt->entity.get());
-			if(callable)
+			// Fast path: call PyObject_CallObject directly, bypassing
+			// CallableEntity::call() which would redundantly acquire GIL,
+			// lock a mutex, create an empty tuple, and run organize_arguments.
+			PyObject* py_callable = pctxt->entity->get_py_callable();
+			if(!py_callable)
 			{
-				callable->call(std::vector<PyObject*>{});
+				handle_err(out_err, "Entity callable is null");
+				return;
+			}
+
+			PyObject* result = pPyObject_CallObject(py_callable, nullptr);
+			if(result)
+			{
+				Py_DECREF(result);
 			}
 			else
 			{
-				handle_err(out_err, "Entity is not callable");
+				std::string err_msg = std::move(check_python_error());
+				if(!err_msg.empty())
+				{
+					handle_err_str((char**)out_err, err_msg);
+				}
+				else
+				{
+					handle_err(out_err, "Failed to call Python callable (void)");
+				}
 				return;
 			}
 		}
@@ -588,10 +605,13 @@ void pyxcall_no_params_no_ret(
 			return;
 		}
 
-		std::string err_msg = std::move(check_python_error());
-		if(!err_msg.empty())
+		if(pPyErr_Occurred())
 		{
-			handle_err_str((char**)out_err, err_msg);
+			std::string err_msg = std::move(check_python_error());
+			if(!err_msg.empty())
+			{
+				handle_err_str((char**)out_err, err_msg);
+			}
 		}
 	}
 	catch(const std::exception& err)

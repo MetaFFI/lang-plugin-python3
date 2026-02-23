@@ -2,6 +2,7 @@
 
 #include <utils/env_utils.h>
 
+#include <iostream>
 #include <stdexcept>
 
 namespace
@@ -56,7 +57,12 @@ PythonTestEnv::PythonTestEnv()
 	  importlib(runtime.runtime_plugin(), "importlib"),
 	  asyncio(runtime.runtime_plugin(), "asyncio")
 {
+	std::cerr << "+++ python3_test_env METAFFI_SOURCE_ROOT=" << get_env_var("METAFFI_SOURCE_ROOT") << std::endl;
+	std::cerr << "+++ python3_test_env METAFFI_HOME=" << get_env_var("METAFFI_HOME") << std::endl;
+	std::cerr << "+++ python3_test_env module_dir=" << resolve_module_dir() << std::endl;
+	std::cerr << "+++ python3_test_env module_file=" << resolve_module_file() << std::endl;
 	runtime.load_runtime_plugin();
+	std::cerr << "+++ python3_test_env runtime_loaded=python3" << std::endl;
 }
 
 PythonTestEnv::~PythonTestEnv()

@@ -35,8 +35,8 @@ TEST_CASE("args and signatures")
 
 	auto var_positional = env.module_dir.load_entity(
 		"callable=var_positional,varargs",
-		{metaffi_int64_array_type},
-		{metaffi_int64_array_type});
+		{metaffi_int64_packed_array_type},
+		{metaffi_int64_packed_array_type});
 	std::vector<int64_t> args = {1, 2};
 	auto [var_args] = var_positional.call<std::vector<int64_t>>(args);
 	CHECK(var_args == args);
@@ -56,7 +56,7 @@ TEST_CASE("args and signatures")
 
 	auto var_pos_kw = env.module_dir.load_entity(
 		"callable=var_positional_and_keyword,varargs,named_args",
-		{metaffi_int64_array_type, metaffi_handle_type},
+		{metaffi_int64_packed_array_type, metaffi_handle_type},
 		{metaffi_handle_type, metaffi_handle_type});
 	auto kw2 = PyDict::create();
 	kw2.set(std::string("x"), int64_t(9));
@@ -70,7 +70,7 @@ TEST_CASE("args and signatures")
 
 	auto mixed_args = env.module_dir.load_entity(
 		"callable=mixed_args,varargs,named_args",
-		{metaffi_int64_type, metaffi_int64_type, metaffi_int64_array_type, metaffi_handle_type},
+		{metaffi_int64_type, metaffi_int64_type, metaffi_int64_packed_array_type, metaffi_handle_type},
 		{metaffi_int64_type, metaffi_int64_type, metaffi_handle_type, metaffi_int64_type, metaffi_handle_type});
 	auto mixed_kwargs = PyDict::create();
 	mixed_kwargs.set(std::string("c"), int64_t(4));

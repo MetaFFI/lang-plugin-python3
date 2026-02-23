@@ -41,11 +41,62 @@ TEST_CASE("arrays")
 	CHECK(sum_ragged == 21);
 }
 
+TEST_CASE("packed array: sum 1d int array")
+{
+	auto& env = python_test_env();
+
+	auto sum1d = env.module_dir.load_entity(
+		"callable=sum_1d_int_array",
+		{metaffi_int64_packed_array_type},
+		{metaffi_int64_type});
+	auto [sum_val] = sum1d.call<int64_t>(std::vector<int64_t>({1, 2, 3, 4, 5}));
+	CHECK(sum_val == 15);
+}
+
+TEST_CASE("packed array: echo 1d int array")
+{
+	auto& env = python_test_env();
+
+	auto echo = env.module_dir.load_entity(
+		"callable=echo_1d_int_array",
+		{metaffi_int64_packed_array_type},
+		{metaffi_int64_packed_array_type});
+	auto [result] = echo.call<std::vector<int64_t>>(std::vector<int64_t>({100, 200, 300}));
+	CHECK(result == std::vector<int64_t>({100, 200, 300}));
+}
+
+TEST_CASE("packed array: echo 1d float array")
+{
+	auto& env = python_test_env();
+
+	auto echo = env.module_dir.load_entity(
+		"callable=echo_1d_float_array",
+		{metaffi_float64_packed_array_type},
+		{metaffi_float64_packed_array_type});
+	auto [result] = echo.call<std::vector<double>>(std::vector<double>({1.5, 2.5, 3.5}));
+	REQUIRE(result.size() == 3);
+	CHECK(result[0] == doctest::Approx(1.5));
+	CHECK(result[1] == doctest::Approx(2.5));
+	CHECK(result[2] == doctest::Approx(3.5));
+}
+
+TEST_CASE("packed array: make 1d int array")
+{
+	auto& env = python_test_env();
+
+	auto make1d = env.module_dir.load_entity(
+		"callable=make_1d_int_array",
+		{},
+		{metaffi_int64_packed_array_type});
+	auto [arr] = make1d.call<std::vector<int64_t>>();
+	CHECK(arr == std::vector<int64_t>({10, 20, 30, 40, 50}));
+}
+
 TEST_CASE("bytes and memory")
 {
 	auto& env = python_test_env();
 
-	auto bytes_buf = env.module_dir.load_entity("callable=returns_bytes_buffer", {}, {metaffi_uint8_array_type});
+	auto bytes_buf = env.module_dir.load_entity("callable=returns_bytes_buffer", {}, {metaffi_uint8_packed_array_type});
 	auto [bytes_val] = bytes_buf.call<std::vector<uint8_t>>();
 	CHECK(bytes_val == std::vector<uint8_t>({1, 2, 3}));
 
@@ -56,7 +107,7 @@ TEST_CASE("bytes and memory")
 	auto bytes_entity = env.builtins.load_entity(
 		"callable=bytes",
 		{metaffi_handle_type},
-		{metaffi_uint8_array_type});
+		{metaffi_uint8_packed_array_type});
 	auto [bytearray_bytes] = bytes_entity.call<std::vector<uint8_t>>(*bytearray_handle.get());
 	CHECK(bytearray_bytes == std::vector<uint8_t>({4, 5, 6}));
 
@@ -128,9 +179,9 @@ TEST_CASE("optional and collections")
 	auto accepts_primitives = env.module_dir.load_entity(
 		"callable=accepts_primitives",
 		{metaffi_bool_type, metaffi_int64_type, metaffi_float64_type, metaffi_handle_type,
-		 metaffi_int64_type, metaffi_string8_type, metaffi_uint8_array_type, metaffi_handle_type},
+		 metaffi_int64_type, metaffi_string8_type, metaffi_uint8_packed_array_type, metaffi_handle_type},
 		{metaffi_bool_type, metaffi_int64_type, metaffi_float64_type, metaffi_handle_type,
-		 metaffi_int64_type, metaffi_string8_type, metaffi_uint8_array_type, metaffi_handle_type});
+		 metaffi_int64_type, metaffi_string8_type, metaffi_uint8_packed_array_type, metaffi_handle_type});
 
 	auto complex_ctor = env.builtins.load_entity(
 		"callable=complex",
@@ -142,7 +193,7 @@ TEST_CASE("optional and collections")
 	std::vector<uint8_t> bytes_val = {'x'};
 	auto bytearray_ctor = env.builtins.load_entity(
 		"callable=bytearray",
-		{metaffi_uint8_array_type},
+		{metaffi_uint8_packed_array_type},
 		{metaffi_handle_type});
 	auto [bytearray_ptr] = bytearray_ctor.call<cdt_metaffi_handle*>(bytes_val);
 	PyHandle bytearray_handle(bytearray_ptr);

@@ -47,7 +47,7 @@ TEST_CASE("core functions")
 
 	auto join = env.module_dir.load_entity(
 		"callable=join_strings",
-		{metaffi_string8_array_type},
+		{metaffi_string8_packed_array_type},
 		{metaffi_string8_type});
 	std::vector<std::string> parts = {"a", "b", "c"};
 	auto [joined] = join.call<std::string>(parts);
