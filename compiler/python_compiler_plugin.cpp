@@ -5,25 +5,32 @@
 #include <utils/logger.hpp>
 #include <filesystem>
 #include <stdexcept>
+#include <cstdio>
 
 static auto LOG = metaffi::get_logger("python3.compiler");
 
 void PythonCompilerPlugin::initialize_python()
 {
+    fprintf(stderr, "+++ py_compiler_plugin: initialize_python enter (m_runtime=%s)\n", m_runtime ? "set" : "null"); fflush(stderr);
     if (m_runtime)
     {
+        fprintf(stderr, "+++ py_compiler_plugin: initialize_python already done, returning\n"); fflush(stderr);
         return;
     }
 
     // Auto-detect Python version
+    fprintf(stderr, "+++ py_compiler_plugin: detect_installed_python3 begin\n"); fflush(stderr);
     auto versions = cpython3_runtime_manager::detect_installed_python3();
+    fprintf(stderr, "+++ py_compiler_plugin: detect_installed_python3 done (count=%zu)\n", versions.size()); fflush(stderr);
     if (versions.empty())
     {
         throw std::runtime_error("No Python 3.x installation found");
     }
 
     // Use latest available version (last in list)
+    fprintf(stderr, "+++ py_compiler_plugin: cpython3_runtime_manager::create(%s) begin\n", versions.back().c_str()); fflush(stderr);
     m_runtime = cpython3_runtime_manager::create(versions.back());
+    fprintf(stderr, "+++ py_compiler_plugin: cpython3_runtime_manager::create done\n"); fflush(stderr);
 
     // Add SDK path to sys.path for importing sdk.compiler.python3.host.*
     // SDK is expected to be in METAFFI_HOME or current working directory
@@ -54,6 +61,7 @@ void PythonCompilerPlugin::initialize_python()
         m_runtime->add_sys_path(api_path.string());
         metaffi_free_env(metaffi_source_root);
     }
+    fprintf(stderr, "+++ py_compiler_plugin: initialize_python done\n"); fflush(stderr);
 }
 
 void PythonCompilerPlugin::execute_host_compiler(
@@ -61,10 +69,13 @@ void PythonCompilerPlugin::execute_host_compiler(
     const std::string& output_path,
     const std::string& host_options)
 {
+    fprintf(stderr, "+++ py_compiler_plugin: execute_host_compiler enter\n"); fflush(stderr);
     initialize_python();
 
+    fprintf(stderr, "+++ py_compiler_plugin: acquire_gil begin\n"); fflush(stderr);
     // Acquire GIL for Python operations
     auto gil = m_runtime->acquire_gil();
+    fprintf(stderr, "+++ py_compiler_plugin: acquire_gil done\n"); fflush(stderr);
 
     // Import host_compiler module
     PyObject* host_compiler_module = pPyImport_ImportModule("sdk.compiler.python3.host.host_compiler");
@@ -339,7 +350,9 @@ void PythonCompilerPlugin::execute_host_compiler(
         pPyTuple_SetItem(compile_args, 3, pPy_None);
     }
 
+    fprintf(stderr, "+++ py_compiler_plugin: calling HostCompiler.compile\n"); fflush(stderr);
     PyObject* result = pPyObject_CallObject(compile_method, compile_args);
+    fprintf(stderr, "+++ py_compiler_plugin: HostCompiler.compile returned (result=%s)\n", result ? "ok" : "null"); fflush(stderr);
     Py_DECREF(compile_args);
     Py_DECREF(compile_method);
 
@@ -357,6 +370,7 @@ void PythonCompilerPlugin::execute_host_compiler(
     }
 
     // Cleanup all PyObject references
+    fprintf(stderr, "+++ py_compiler_plugin: Py_DECREF cleanup begin\n"); fflush(stderr);
     Py_DECREF(result);
     Py_DECREF(compiler);
     Py_DECREF(definition);
@@ -365,6 +379,7 @@ void PythonCompilerPlugin::execute_host_compiler(
     Py_DECREF(idl_entities_module);
     Py_DECREF(context_module);
     Py_DECREF(host_compiler_module);
+    fprintf(stderr, "+++ py_compiler_plugin: execute_host_compiler done\n"); fflush(stderr);
 }
 
 void PythonCompilerPlugin::init()
@@ -391,6 +406,8 @@ void PythonCompilerPlugin::compile_from_host(
 
 PythonCompilerPlugin::~PythonCompilerPlugin()
 {
+    fprintf(stderr, "+++ py_compiler_plugin: ~PythonCompilerPlugin enter (m_runtime=%s)\n", m_runtime ? "set" : "null"); fflush(stderr);
     // Runtime manager handles cleanup automatically via RAII
     m_runtime.reset();
+    fprintf(stderr, "+++ py_compiler_plugin: ~PythonCompilerPlugin m_runtime.reset() done\n"); fflush(stderr);
 }
