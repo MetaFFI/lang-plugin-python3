@@ -19,10 +19,22 @@ import sys
 import shutil
 import platform
 import math
+import signal
 
 # Module-level state set by setUpModule
 _generated_file = None
 _host_module = None
+
+
+def _returncode_desc(rc: int) -> str:
+    if rc < 0:
+        signum = -rc
+        try:
+            signame = signal.Signals(signum).name
+        except ValueError:
+            signame = "UNKNOWN"
+        return f"{rc} (signal {signame}/{signum})"
+    return str(rc)
 
 
 def _get_xllr_test_plugin_path() -> str:
@@ -76,17 +88,23 @@ def setUpModule():
     os.makedirs(output_base_dir, exist_ok=True)
 
     # Run metaffi compiler
+    print(f"+++ py_host_compiler_e2e: invoking metaffi compiler", flush=True)
+    print(f"+++ py_host_compiler_e2e: idl={idl_path}", flush=True)
+    print(f"+++ py_host_compiler_e2e: cwd={output_base_dir}", flush=True)
     result = subprocess.run(
         ['metaffi', '-c', '--idl', idl_path, '-h', 'python3'],
         capture_output=True,
         text=True,
         cwd=output_base_dir
     )
+    print(f"+++ py_host_compiler_e2e: metaffi returncode={_returncode_desc(result.returncode)}", flush=True)
 
     if result.stdout:
         print(f"Compiler stdout:\n{result.stdout}")
     if result.stderr:
         print(f"Compiler stderr:\n{result.stderr}")
+        if "corrupted double-linked list" in result.stderr or "invalid pointer" in result.stderr:
+            print("+++ py_host_compiler_e2e: allocator-corruption marker detected in stderr", flush=True)
 
     if result.returncode != 0:
         raise RuntimeError(f"Compiler failed with code {result.returncode}:\n{result.stderr}\ncmd: metaffi -c --idl {idl_path} -h python3\ncwd: {output_base_dir}")
@@ -101,16 +119,20 @@ def setUpModule():
 
     import host_MetaFFIHost as host
     plugin_path = _get_xllr_test_plugin_path()
+    print(f"+++ py_host_compiler_e2e: binding generated host to plugin={plugin_path}", flush=True)
     host.bind_module_to_code(plugin_path, 'test')
+    print("+++ py_host_compiler_e2e: bind_module_to_code completed", flush=True)
     _host_module = host
 
 
 def tearDownModule():
     """Clean up sys.path."""
+    print("+++ py_host_compiler_e2e: tearDownModule start", flush=True)
     test_dir = os.path.dirname(os.path.abspath(__file__))
     test_output_dir = os.path.join(test_dir, 'output', 'test')
     if test_output_dir in sys.path:
         sys.path.remove(test_output_dir)
+    print("+++ py_host_compiler_e2e: tearDownModule done", flush=True)
 
 
 class TestCompilerGeneration(unittest.TestCase):
