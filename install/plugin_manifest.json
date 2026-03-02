@@ -1,0 +1,19 @@
+{
+	"name": "python3",
+	"version": "0.3.1",
+	"files": {
+		"windows": [
+			"xllr.python3.dll",
+			"metaffi.compiler.python3.dll",
+			"metaffi.idl.python3.dll",
+			"compiler/**"
+		],
+		"ubuntu": [
+			"xllr.python3.so",
+			"metaffi.compiler.python3.so",
+			"metaffi.idl.python3.so",
+			"compiler/**"
+		]
+	},
+	"extra_files": {}
+}
