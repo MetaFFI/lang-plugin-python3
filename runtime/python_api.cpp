@@ -717,7 +717,8 @@ xcall* load_entity(const char* module_path, const char* entity_path, metaffi_typ
 			}
 
 			std::vector<std::string> path_to_object;
-			boost::split(path_to_object, load_symbol, boost::is_any_of("."));
+			{ std::istringstream _ss(load_symbol); std::string _tok;
+			  while(std::getline(_ss, _tok, '.')) path_to_object.push_back(_tok); }
 			ctxt->attribute_path = path_to_object;
 
 			// For non-instance attributes, resolve immediately

@@ -1,5 +1,5 @@
 # Load conan packages
-find_or_install_package(Boost COMPONENTS filesystem algorithm)
+find_or_install_package(Boost COMPONENTS filesystem)
 
 # Collect plugin source files
 collect_c_cpp_files(${CMAKE_CURRENT_LIST_DIR} xllr.python3)
@@ -37,7 +37,7 @@ endif()
 c_cpp_shared_lib(xllr.python3
 		"${xllr.python3_src};${sdk_cpython3_src}"
 		"${sdk_cpython3_include};${Boost_INCLUDE_DIRS}"
-		"Boost::filesystem;Boost::algorithm;${platform_libs}"
+		"Boost::filesystem;${platform_libs}"
 		"./python3")
 
 set(xllr.python3 xllr.python3 PARENT_SCOPE)
